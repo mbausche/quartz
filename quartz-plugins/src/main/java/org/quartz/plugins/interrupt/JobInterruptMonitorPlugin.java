@@ -52,9 +52,6 @@ public class JobInterruptMonitorPlugin extends TriggerListenerSupport implements
 
     private ScheduledExecutorService executor;
 
-    @SuppressWarnings("rawtypes")
-    private ScheduledFuture future;
-
     private Scheduler scheduler;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -65,6 +62,9 @@ public class JobInterruptMonitorPlugin extends TriggerListenerSupport implements
 
     public static final String MAX_RUN_TIME = "MaxRunTime";
 
+    //Key under which the future is stored in the job data map
+    private static final String FUTURE = "ScheduledFuture";
+    
     public JobInterruptMonitorPlugin() {
     }
 
@@ -118,6 +118,14 @@ public class JobInterruptMonitorPlugin extends TriggerListenerSupport implements
                 future = monitorPlugin.scheduleJobInterruptMonitor(context.getJobDetail().getKey(), jobDataDelay);
                 getLog().debug("Job's Interrupt Monitor has been scheduled to interrupt with the delay :"
                         + DEFAULT_MAX_RUNTIME);
+                
+                //store the future in the jobDataMap
+                @SuppressWarnings("rawtypes")
+				ScheduledFuture future = monitorPlugin.scheduleJobInterruptMonitor(context.getJobDetail().getKey(), jobDataDelay);
+                context.getJobDetail().getJobDataMap().put(FUTURE, future);
+
+                
+                
             }
         } catch (SchedulerException e) {
             getLog().info("Error scheduling interrupt monitor " + e.getMessage(), e);
@@ -127,6 +135,12 @@ public class JobInterruptMonitorPlugin extends TriggerListenerSupport implements
     public void triggerComplete(Trigger trigger, JobExecutionContext context,
             CompletedExecutionInstruction triggerInstructionCode) {
         // cancel the Future if job is complete
+        
+       //get the future from the jobDataMap
+       @SuppressWarnings("rawtypes")
+       ScheduledFuture future = (ScheduledFuture) context.getJobDetail().getJobDataMap().get(FUTURE);
+
+        
         if (future != null) {
             future.cancel(true);
         }
